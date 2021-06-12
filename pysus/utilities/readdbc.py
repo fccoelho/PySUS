@@ -5,7 +5,6 @@ license: GPL V3 or Later
 """
 import os
 from tempfile import NamedTemporaryFile
-from io import BytesIO
 import pandas as pd
 from dbfread import DBF
 import geopandas as gpd
@@ -16,21 +15,23 @@ except (ImportError, ModuleNotFoundError):
     from _readdbc import ffi, lib
 
 
-def read_dbc(filename, encoding='utf-8', raw=False):
+def read_dbc(filename, encoding='utf-8', raw=False, tmp_dir='.', delete_tmp=True):
     """
     Opens a DATASUS .dbc file and return its contents as a pandas
     Dataframe.
     :param filename: .dbc filename
     :param encoding: encoding of the data
     :param raw: Skip type conversion. Set it to True to avoid type conversion errors
+    :param tmp_dir: Temp directory where tmp files are going to - useful if using ramdisks to reduce IO.
+    :param delete_tmp: Delete temporary files after function execution
     :return: Pandas Dataframe.
     """
     if isinstance(filename, str):
         filename = filename.encode()
-    with NamedTemporaryFile(delete=False) as tf:
+    with NamedTemporaryFile(dir=tmp_dir, delete=delete_tmp) as tf:
         dbc2dbf(filename, tf.name.encode())
         dbf = DBF(tf.name, encoding=encoding, raw=raw)
-        df = gpd.GeoDataFrame(list(dbf))
+        df = pd.DataFrame(list(dbf))
     os.unlink(tf.name)
 
     return df
